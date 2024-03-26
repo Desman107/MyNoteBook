@@ -4,9 +4,9 @@
 
 通常采用模运算
 最好采用质数，这样冲突概率最小
-
-可能存在冲突
-
+<font color = 'red'>
+可能存在<mark>冲突</mark>
+</font>
 ## 拉链法
 ![拉链法解决冲突](image/拉链hash.drawio.png)
 使用链表存储冲突数
@@ -17,10 +17,12 @@
 int h[N], e[N], ne[N], idx;
 
 void insert(int x){
-    int k = (x % N + N) % N;//防止出现负数
-    e[idx] = x;
-    ne[idx] = h[k];//头插
-    h[k] = idx ++ ;
+    if(!find(x)){
+        int k = (x % N + N) % N;
+        e[idx] = x;
+        ne[idx] = h[k];
+        h[k] = idx ++;
+    }
 }
 ```
 ![](image/hash_insert.drawio.png)
@@ -28,13 +30,12 @@ void insert(int x){
 
 寻找是否存在x
 ```cpp
-void insert(int x){
-    if(!find(x)){
-        int k = (x % N + N) % N;
-        e[idx] = x;
-        ne[idx] = h[k];
-        h[k] = idx ++;
+bool find(int x){
+    int k = (x % N + N) % N;
+    for ( int i = h[k]; i != -1; i = ne[i]){
+        if (e[i] == x) return true;
     }
+    return false;
 }
 ```
 
