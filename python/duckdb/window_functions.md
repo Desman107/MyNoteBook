@@ -1,4 +1,57 @@
+<style>
+pre {
+  overflow-y: auto;
+  max-height: 300px;
+}
+</style>
 # Window Functions
+SQL的窗口函数是一种非常强大的工具，用于进行复杂的数据分析和计算，而不需要将数据分组到多个输出行中。你可以在单个查询中完成排序、排名、累积等多种计算。窗口函数也称为OLAP（在线分析处理）函数。
+
+## 基本概念
+窗口函数在执行普通的SQL查询后对结果集进行操作。这意味着先执行FROM, JOIN, WHERE, GROUP BY, HAVING等语句，然后再应用窗口函数。窗口函数通过定义"窗口"（数据的子集），对这些子集执行计算。
+
+## 关键术语
++ **窗口**：窗口是指定行的集合，这些行是与当前行在某种计算关系上相关联的。
++ **OVER()**：这是窗口函数的核心部分，用于定义窗口的分组方式、排序顺序和窗口的范围。
+
+## 窗口函数语法
+窗口函数的语法如下:
+```sql
+<window_function> OVER (
+    PARTITION BY <column1>, <column2>, ...
+    ORDER BY <column>
+    [ROWS|RANGE BETWEEN <start> AND <end>]
+)
+```
++ `OVER(ORDER BY date)` 指定窗口的排序方式
++ `OVER(ROWS BETWEEN <start> AND <END>)`
+  其中`<start>`和`<end>`可以是以下几种类型：
+  + `UNBOUNDED PRECEDING`: 表示从分区的起始行开始。
+  + `x PRECEDING`: 表示从当前行向前x行（不包括当前行本身），x必须是非负整数。
+  + `CURRENT ROW`: 表示当前行。
+  + `x FOLLOWING`: 表示从当前行向后x行（不包括当前行本身），x必须是非负整数。
+  + `UNBOUNDED FOLLOWING`: 表示直到分区的结束行。
++ `OVER(PARTITION BY code)` 指定窗口的的分组方式，每个窗口是相互独立的
+
+## 常用的窗口函数
+1. **聚合窗口函数**：
++ `SUM() OVER()`
++ `AVG() OVER()`
++ `MIN() OVER()`
++ `MAX() OVER()`
+这些函数可以在窗口内部对数据进行聚合计算。
+2. **排名窗口函数**：
++ `ROW_NUMBER() OVER()`
++ `RANK() OVER()`
++ `DENSE_RANK() OVER()`
++ `NTILE(n) OVER()`
+这些函数用于为数据集中的行分配一个唯一的排名。
+3. **分析窗口函数**：
++ `LEAD(value, offset, default) OVER()`
++ `LAG(value, offset, default) OVER()`
++ `FIRST_VALUE() OVER()`
++ `LAST_VALUE() OVER()`
+这些函数可以访问由窗口定义的行集中的前后行。
 
 ## Example
 ```sql
@@ -136,3 +189,50 @@ WHERE
 
 ## LAST_VALUE函数
 `LAST_VALUE`函数与`FIRST_VALUE`函数用法大致相同，不同的是，其获取的是窗口中的最后一个值
+
+## NTILE函数
+`NTILE()` 是 SQL 中的一种窗口函数，用于将有序分区中的行分成指定数量的近似等大小的组，并为每一行分配一个组号。这种分组是基于排序顺序来确定的。`NTILE()` 函数非常有用于执行分位数分析、数据分段、以及在统计分析中均匀切分数据集。
+
+### 语法
+`NTILE()` 函数的基本语法如下：
+```sql
+NTILE(number_of_tiles) OVER (
+    [PARTITION BY partition_expression, ...]
+    ORDER BY sort_expression [ASC|DESC], ...
+)
+```
++ `number_of_tiles`：一个正整数，定义要将数据分割成多少个组。
++ `PARTITION BY`：可选，按指定列的值对结果集进行分组。如果省略，整个结果集被视为一个单一的分区。
++ `ORDER BY`：定义如何对数据进行排序，排序的基础是分组的依据
+
+### 工作原理
+`NTILE()` 函数首先根据 `ORDER BY` 子句对数据进行排序。然后，根据 `number_of_tiles` 参数将这些排序后的数据分割成指定数量的组。如果数据总数不能被组数整除，那么前几个组将包含一个额外的数据行。
+
+### 示例
+使用 `NTILE()` 函数将股票的收盘价分为高和低两部分
+```sql
+SELECT 
+    date,
+    InnerCode,
+    close,
+    NTILE(2) OVER (PARTITION BY InnerCode ORDER BY close ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS cluster
+FROM 
+    stk_day
+WHERE
+    date >= '2019-01-01' AND date <= '2019-01-15'
+ORDER BY
+    InnerCode,date
+```
+返回结果如下：
+| date                |   InnerCode |   close |   cluster |
+|:--------------------|------------:|--------:|------------:|
+| 2019-01-02 00:00:00 |          85 |    7.16 |           1 |
+| 2019-01-03 00:00:00 |          85 |    7    |           1 |
+| 2019-01-04 00:00:00 |          85 |    7.12 |           1 |
+| 2019-01-07 00:00:00 |          85 |    7.15 |           1 |
+| 2019-01-08 00:00:00 |          85 |    7.2  |           2 |
+| 2019-01-09 00:00:00 |          85 |    7.2  |           2 |
+| 2019-01-10 00:00:00 |          85 |    7.24 |           2 |
+| 2019-01-11 00:00:00 |          85 |    7.27 |           2 |
+| 2019-01-14 00:00:00 |          85 |    7.14 |           1 |
+| 2019-01-15 00:00:00 |          85 |    7.18 |           2 |
